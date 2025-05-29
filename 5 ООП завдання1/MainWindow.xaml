@@ -39,7 +39,20 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
+        <Style x:Key="ColorComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border BorderBrush="#444" BorderThickness="0,0,0,1">
+                            <StackPanel Orientation="Horizontal" Margin="2,0">
+                                <Rectangle Width="16" Height="16" Fill="{Binding}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding}" VerticalAlignment="Center" Margin="5,0"/>
+                            </StackPanel>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="CasinoButtonOrange" BasedOn="{StaticResource CasinoButtonStyle}" TargetType="Button">
             <Setter Property="Background" Value="#f57c00"/>
             <Style.Triggers>
@@ -58,40 +71,59 @@
 
         <!-- Ліва панель -->
         <Border Grid.Column="0" Margin="10" Background="#25253A" Padding="10" CornerRadius="10">
-            <StackPanel>
-                <TextBlock Text="🎲 Ставки" FontWeight="Bold" FontSize="20" Foreground="White" Margin="0,0,0,10"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
 
-                <TextBlock Text="💰 Баланс:" FontSize="14" Foreground="#BBBBBB"/>
-                <TextBlock x:Name="BalanceText" Text="250000$"
-                           FontWeight="Bold" FontSize="18"
-                           Foreground="LimeGreen" Margin="0,0,0,10"/>
+                    <!-- Баланс -->
+                    <TextBlock Text="💰 Баланс:" FontSize="14" Foreground="#BBBBBB"/>
+                    <TextBlock x:Name="BalanceText" Text="250000$"
+                       FontWeight="Bold" FontSize="18"
+                       Foreground="LimeGreen" Margin="0,0,0,10"/>
 
-                <TextBlock Text="🎯 Ставка:" Margin="0,10,0,5" Foreground="#BBBBBB"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button Content="−" Width="30" Height="30" Click="DecreaseBet_Click"
-                            Style="{StaticResource CasinoButtonStyle}"/>
-                    <TextBlock x:Name="BetAmountText" Text="20$" Width="60" 
-                               TextAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="White"/>
-                    <Button Content="+" Width="30" Height="30" Click="IncreaseBet_Click"
-                            Style="{StaticResource CasinoButtonStyle}"/>
+                    <!-- Ставка -->
+                    <TextBlock Text="🎯 Ставка:" Margin="0,10,0,5" Foreground="#BBBBBB"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="−" Width="30" Height="30" Click="DecreaseBet_Click"
+                        Style="{StaticResource CasinoButtonStyle}"/>
+                        <TextBlock x:Name="BetAmountText" Text="20$" Width="60" 
+                           TextAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="White"/>
+                        <Button Content="+" Width="30" Height="30" Click="IncreaseBet_Click"
+                        Style="{StaticResource CasinoButtonStyle}"/>
+                    </StackPanel>
+
+                    <!-- Вибір кількості коней -->
+                    <TextBlock Text="🐎 Кількість коней:" Margin="0,10,0,5" Foreground="#BBBBBB"/>
+                    <ComboBox x:Name="HorseCountSelector" SelectedIndex="0" Width="60"
+                      SelectionChanged="HorseCountSelector_SelectionChanged">
+                        <ComboBoxItem Content="2"/>
+                        <ComboBoxItem Content="3"/>
+                        <ComboBoxItem Content="4"/>
+                    </ComboBox>
+
+                    <!-- Палітра кольорів для коней -->
+                    <TextBlock Text="🎨 Колір коня:" Margin="0,10,0,5" Foreground="#BBBBBB"/>
+                    <WrapPanel x:Name="ColorPickersPanel" Orientation="Horizontal" Margin="0,0,0,10"/>
+
+                    <!-- Вибір коня для ставки -->
+                    <TextBlock Text="🐴 Обери коня:" Margin="0,10,0,5" Foreground="#BBBBBB"/>
+                    <ComboBox x:Name="HorseSelector" Margin="0,0,0,10" FontWeight="Bold"
+                      Background="#1E1E2F" Foreground="Black" BorderBrush="#444"/>
+
+                    <!-- Кнопки -->
+                    <Button Content="💵 Зробити ставку" Click="PlaceBet_Click"
+                    Margin="0,10,0,10" Style="{StaticResource CasinoButtonGreen}"/>
+
+                    <Button Content="🏁 Почати гонку" Click="StartButton_Click"
+                    Style="{StaticResource CasinoButtonOrange}"/>
+
                 </StackPanel>
-
-                <TextBlock Text="🐎 Обери коня:" Margin="0,10,0,5" Foreground="#000000"/>
-                <ComboBox x:Name="HorseSelector" Margin="0,0,0,10" FontWeight="Bold"
-                          Background="#1E1E2F" Foreground="Black" BorderBrush="#444"/>
-
-                <Button Content="💵 Зробити ставку" Click="PlaceBet_Click"
-                        Margin="0,10,0,10" Style="{StaticResource CasinoButtonGreen}"/>
-
-                <Button Content="🏁 Почати гонку" Click="StartButton_Click"
-                        Style="{StaticResource CasinoButtonOrange}"/>
-            </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Центральна панель -->
         <Grid Grid.Column="1">
             <ScrollViewer Name="RaceScrollViewer" HorizontalScrollBarVisibility="Auto"
-            VerticalScrollBarVisibility="Disabled" Margin="0,30,10,130">
+                          VerticalScrollBarVisibility="Disabled" Margin="0,30,10,130">
                 <Canvas Name="RaceCanvas" Height="216" Width="1400" RenderTransformOrigin="0.5,0.5">
                     <Canvas.RenderTransform>
                         <TransformGroup>
@@ -103,33 +135,32 @@
                     </Canvas.RenderTransform>
                     <Canvas.Background>
                         <ImageBrush ImageSource="images/Background/Track.png"
-                      Viewport="0,0,200,200"
-                      ViewportUnits="Absolute"
-                      TileMode="Tile"
-                     />
+                                    Viewport="0,0,200,200"
+                                    ViewportUnits="Absolute"
+                                    TileMode="Tile"/>
                     </Canvas.Background>
                 </Canvas>
             </ScrollViewer>
 
             <DataGrid x:Name="DetailsGrid"
-          AutoGenerateColumns="False"
-          Height="120"
-          VerticalAlignment="Bottom"
-          Margin="0,0,0,10"
-          IsReadOnly="True"
-          HeadersVisibility="Column"
-          GridLinesVisibility="None"
-          Background="#2D2D40"
-          Foreground="Black"
-          AlternatingRowBackground="#30304A"
-          RowBackground="#25253A"
-          BorderBrush="#444"
-          FontSize="13"
-          ScrollViewer.VerticalScrollBarVisibility="Hidden"
-          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-          CanUserResizeRows="False"
-          CanUserResizeColumns="False"
-          CanUserSortColumns="False">
+                      AutoGenerateColumns="False"
+                      Height="120"
+                      VerticalAlignment="Bottom"
+                      Margin="0,0,0,10"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="None"
+                      Background="#2D2D40"
+                      Foreground="White"
+                      AlternatingRowBackground="#30304A"
+                      RowBackground="#25253A"
+                      BorderBrush="#444"
+                      FontSize="13"
+                      ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                      ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                      CanUserResizeRows="False"
+                      CanUserResizeColumns="False"
+                      CanUserSortColumns="False">
 
                 <DataGrid.Columns>
                     <!-- Ім’я -->
@@ -141,7 +172,7 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Rectangle Width="16" Height="16" Margin="0,0,5,0"
-                                   Fill="{Binding ColorBrush}"/>
+                                               Fill="{Binding ColorBrush}"/>
                                     <TextBlock Text="{Binding ColorName}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -164,8 +195,6 @@
                     <DataGridTextColumn Header="Виграш" Binding="{Binding Money}" Width="80" />
                 </DataGrid.Columns>
             </DataGrid>
-
-
 
         </Grid>
     </Grid>

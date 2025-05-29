@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
+using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace WpfApp10
 {
     public partial class MainWindow : Window
     {
-        private const int HorseCount = 4;
+        private int horseCount = 4; // не const — тепер змінна
         private const int FrameCount = 12;
-        private const string ImagePath = @"C:\\Users\\User\\source\\repos\\5 ООП завдання1\\5 ООП завдання1\\images\\";
+        private const string ImagePath = @"C:\\Users\\User\\source\\repos\\5-12\\5 ООП завдання1\\images\\";
         private const int TrackWidth = 1500;
         private bool raceFinished = false;
 
@@ -27,9 +29,16 @@ namespace WpfApp10
 
         public MainWindow()
         {
-            InitializeComponent();
+            InitializeComponent(); // СПОЧАТКУ ініціалізуємо всі елементи XAML
 
             LoadBackground();
+
+            // Генеруємо комбобокси для кольорів
+            if (int.TryParse(((ComboBoxItem)HorseCountSelector.SelectedItem)?.Content.ToString(), out int count))
+            {
+                GenerateColorSelectors(count);
+            }
+
             InitHorses();
             UpdateUI();
         }
@@ -54,32 +63,104 @@ namespace WpfApp10
             }
         }
 
+        private void GenerateColorSelectors(int count)
+        {
+            if (ColorPickersPanel == null)
+            {
+                return; // Просто завершуємо метод, якщо панель немає
+            }
+
+            ColorPickersPanel.Children.Clear();
+
+            string[] colors = { "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Cyan", "Magenta" };
+
+            for (int i = 0; i < count; i++)
+            {
+                var cb = new ComboBox
+                {
+                    ItemsSource = colors.ToList(),
+                    SelectedIndex = i % colors.Length,
+                    Width = 130,
+                    Margin = new Thickness(2),
+                    ItemContainerStyle = (Style)FindResource("ColorComboBoxItemStyle"),
+                    HorizontalContentAlignment = HorizontalAlignment.Left
+                };
+
+                // Налаштування шаблону самого ComboBox
+                cb.ItemTemplate = new DataTemplate();
+                var stack = new FrameworkElementFactory(typeof(StackPanel));
+                stack.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+
+                var rect = new FrameworkElementFactory(typeof(Rectangle));
+                rect.SetBinding(Rectangle.FillProperty, new Binding());
+                rect.SetValue(Rectangle.WidthProperty, 16.0);
+                rect.SetValue(Rectangle.HeightProperty, 16.0);
+                rect.SetValue(MarginProperty, new Thickness(0, 0, 5, 0));
+
+                var text = new FrameworkElementFactory(typeof(TextBlock));
+                text.SetBinding(TextBlock.TextProperty, new Binding());
+
+                stack.AppendChild(rect);
+                stack.AppendChild(text);
+
+                cb.ItemTemplate.VisualTree = stack;
+
+                ColorPickersPanel.Children.Add(cb); // Додаємо комбобокс до панелі
+            }
+
+            // ВИДАЛЕННЯ ЛОГУВАННЯ
+            // MessageBox.Show($"Generated {ColorPickersPanel.Children.Count} color selectors.");
+        }
+        private void HorseCountSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (int.TryParse(((ComboBoxItem)HorseCountSelector.SelectedItem)?.Content.ToString(), out int count))
+            {
+                GenerateColorSelectors(count);
+                InitHorses(); // Оновлюємо коней
+            }
+        }
+
         private void InitHorses()
         {
+            if (RaceCanvas == null)
+            {
+                return;
+            }
             RaceCanvas.Children.Clear();
             LoadBackground();
             horses.Clear();
 
-            string[] horseNames = { "Lucky", "Ranger", "Willow", "Tucker" };
-            SolidColorBrush[] colors = { Brushes.Red, Brushes.Blue, Brushes.Green, Brushes.DarkCyan };
+            if (!int.TryParse(((ComboBoxItem)HorseCountSelector.SelectedItem)?.Content.ToString(), out horseCount))
+                horseCount = 4;
 
-            for (int i = 0; i < HorseCount; i++)
+            List<SolidColorBrush> selectedColors = new List<SolidColorBrush>();
+            foreach (ComboBox cb in ColorPickersPanel.Children)
+            {
+                var colorStr = cb.SelectedItem?.ToString();
+                if (colorStr != null && TryGetBrushFromName(colorStr, out var brush))
+                    selectedColors.Add(brush);
+                else
+                    selectedColors.Add(Brushes.Gray); // за замовчуванням
+            }
+
+            string[] horseNames = { "Lucky", "Ranger", "Willow", "Tucker" };
+
+            for (int i = 0; i < horseCount; i++)
             {
                 Horse horse = new Horse
                 {
-                    Name = horseNames[i],
+                    Name = horseNames[i % horseNames.Length] + $" #{i + 1}",
                     Speed = rand.Next(5, 9),
                     Position = 0,
                     FrameIndex = 0,
                     Y = 10 + i * 50,
-                    ColorName = colors[i].Color.ToString(),
-                    Coefficient = 1.25,
+                    ColorName = selectedColors[i].Color.ToString(),
+                    Coefficient = 1.25 + i * 0.1,
                     Money = 0,
-                    ColorBrush = colors[i],
+                    ColorBrush = selectedColors[i],
                     ImageControl = new Image { Width = 51, Height = 51 }
                 };
 
-                // Додаємо текст з ім’ям коня
                 TextBlock nameLabel = new TextBlock
                 {
                     Text = horse.Name,
@@ -96,7 +177,6 @@ namespace WpfApp10
                 Canvas.SetTop(horse.NameLabel, horse.Y - 20);
                 Canvas.SetLeft(horse.NameLabel, horse.Position);
 
-                // Події наведення
                 horse.ImageControl.MouseEnter += (s, e) =>
                 {
                     horse.NameLabel.Visibility = Visibility.Visible;
@@ -113,10 +193,25 @@ namespace WpfApp10
                 Canvas.SetLeft(horse.ImageControl, horse.Position);
             }
 
+            // Оновлюємо список коней у HorseSelector
             HorseSelector.ItemsSource = horses.Select((h, i) => $"{i + 1}. {h.Name}");
             HorseSelector.SelectedIndex = 0;
         }
 
+        private bool TryGetBrushFromName(string name, out SolidColorBrush brush)
+        {
+            try
+            {
+                var converter = new System.Windows.Media.BrushConverter();
+                brush = (SolidColorBrush)converter.ConvertFromString(name);
+                return true;
+            }
+            catch
+            {
+                brush = Brushes.Gray;
+                return false;
+            }
+        }
 
         private void StartAnimation()
         {
@@ -134,18 +229,15 @@ namespace WpfApp10
             {
                 if (horse.Finished) continue;
 
-                // Рух
                 horse.Position += horse.Speed;
                 Canvas.SetLeft(horse.ImageControl, horse.Position);
                 Canvas.SetTop(horse.ImageControl, horse.Y);
                 Canvas.SetLeft(horse.NameLabel, horse.Position);
                 Canvas.SetTop(horse.NameLabel, horse.Y - 20);
 
-                // Анімація
                 horse.FrameIndex = (horse.FrameIndex + 1) % FrameCount;
                 UpdateHorseImage(horse);
 
-                // Перевірка фінішу
                 if (horse.Position >= TrackWidth - 100)
                 {
                     horse.Finished = true;
@@ -160,7 +252,6 @@ namespace WpfApp10
 
             RaceScrollViewer.ScrollToHorizontalOffset(horses.Max(h => h.Position) - 200);
 
-            // Коли всі фінішували
             if (!raceFinished && allFinished)
             {
                 timer.Stop();
@@ -173,7 +264,6 @@ namespace WpfApp10
                     double win = betAmount * winner.Coefficient;
                     balance += (int)win;
                     winner.Money = (int)win;
-
                     MessageBox.Show($"🏆 Переміг {winner.Name}! Ви виграли {win}$!");
                 }
                 else
@@ -186,7 +276,6 @@ namespace WpfApp10
 
             UpdateDetailsGrid();
         }
-
 
         private void UpdateHorseImage(Horse horse)
         {
@@ -220,7 +309,7 @@ namespace WpfApp10
             DetailsGrid.ItemsSource = horses.Select(h => new
             {
                 h.Name,
-                Колір = h.ColorName, // можна також зробити кольоровий квадратик, якщо треба
+                Колір = h.ColorName,
                 Швидкість = h.Speed,
                 h.Coefficient,
                 h.Position,
@@ -229,10 +318,9 @@ namespace WpfApp10
             }).ToList();
         }
 
-
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
-            InitHorses();
+            InitHorses(); // Оновлюємо коней перед стартом
             raceFinished = false;
             UpdateUI();
             StartAnimation();
@@ -295,5 +383,4 @@ namespace WpfApp10
         public bool Finished { get; set; } = false;
         public DateTime FinishTime { get; set; }
     }
-
 }
